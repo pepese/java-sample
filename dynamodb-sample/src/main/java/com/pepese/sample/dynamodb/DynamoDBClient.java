@@ -1,7 +1,11 @@
 package com.pepese.sample.dynamodb;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.PostConstruct;
 
@@ -92,7 +96,6 @@ public class DynamoDBClient {
 			}
 		} catch (Exception e) {
 			throwRuntimeException("Query is failed.", e);
-			System.err.println(e.getMessage());
 		}
 		return result != null ? result.getItems() : null;
 	}
@@ -123,17 +126,48 @@ public class DynamoDBClient {
 		DeleteItemRequest request = new DeleteItemRequest().withTableName(tableName).withKey(key);
 		try {
 			client.deleteItem(request);
-			System.out.println("DeleteItem is succeeded.");
+			log.debug("DeleteItem is succeeded.");
 		} catch (Exception e) {
 			throwRuntimeException("DeleteItem is failed.", e);
 		}
 	}
-
-	public void batchWrite(Map<String, List<WriteRequest>> items) {
-		// 25 Request以下なのか気にしないようにしたい
-		if (items == null || items.isEmpty()) {
+	
+	// 作成中
+	public void batchWrite(Map<String, List<WriteRequest>> _items) {
+		if (_items == null || _items.isEmpty()) {
 			return;
 		}
+		int batchWriteMaxNum = 25;
+		Set<String> tables = _items.keySet();
+		int remainRequestNum = 0;
+		Map<String, List<WriteRequest>> items = new HashMap<String, List<WriteRequest>>();
+		for(Iterator<String> tableIt = tables.iterator(); tableIt.hasNext();) {
+			String table = tableIt.next();
+			List<WriteRequest> _writeRequests = _items.get(table);
+			List<WriteRequest> writeRequests = new ArrayList<WriteRequest>();
+			for(Iterator<WriteRequest> writeRequestsIt = _writeRequests.iterator(); writeRequestsIt.hasNext();) {
+				WriteRequest writeRequest = writeRequestsIt.next();
+				writeRequests.add(writeRequest);
+				if(writeRequests.size() == batchWriteMaxNum - remainRequestNum) {
+					items.put(table, writeRequests);
+					batchWriteCore(items);
+					writeRequests = new ArrayList<WriteRequest>();
+					items = new HashMap<String, List<WriteRequest>>();
+					remainRequestNum = 0;
+				} else if (!writeRequestsIt.hasNext() && tableIt.hasNext()) {
+					items.put(table, writeRequests);
+					remainRequestNum = writeRequests.size();
+					writeRequests = new ArrayList<WriteRequest>();
+				} else if (!writeRequestsIt.hasNext() && !tableIt.hasNext() && writeRequests.size() > 0) {
+					items.put(table, writeRequests);
+				}
+			}
+		}
+	}
+
+	// 上記が作成できたら private 化
+	public void batchWriteCore(Map<String, List<WriteRequest>> items) {
+		// 25 Request以下なのか気にしないようにしたい
 		try {
 			BatchWriteItemRequest bwir = new BatchWriteItemRequest()
 					.withReturnConsumedCapacity(ReturnConsumedCapacity.TOTAL).withRequestItems(items);
@@ -141,15 +175,15 @@ public class DynamoDBClient {
 			if (result == null) {
 				return;
 			}
-			System.out.println("[DEBUG] batchWrite() CC: " + result.getConsumedCapacity()); // 消費されたキャパシティーユニット
+			log.debug("batchWrite() CC: " + result.getConsumedCapacity()); // 消費されたキャパシティーユニット
 
 			if (result.getUnprocessedItems() != null && !result.getUnprocessedItems().isEmpty()) {
 				Thread.sleep(1000); // Exponential Backoff アルゴリズムに変更する？
-				System.out.println("[WARN] UNPROCESSED " + result.getUnprocessedItems().size());
+				log.warn("UNPROCESSED " + result.getUnprocessedItems().size());
 				batchWrite(result.getUnprocessedItems());
 			}
 		} catch (Exception e) {
-			System.err.println(e.getMessage());
+			throwRuntimeException("BatchWrite is failed.", e);
 		}
 	}
 
@@ -157,10 +191,4 @@ public class DynamoDBClient {
 		log.error(message, e);
 		throw new RuntimeException(message, e);
 	}
-
-	private void throwRuntimeException(String message) {
-		log.error(message);
-		throw new RuntimeException(message);
-	}
-
 }

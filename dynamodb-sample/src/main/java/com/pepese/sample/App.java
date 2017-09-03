@@ -25,7 +25,7 @@ public class App implements CommandLineRunner {
 
 	@Override
 	public void run(String... args) {
-		// item data
+		// create item data for putItem
 		HashMap<String, AttributeValue> item = new HashMap<String, AttributeValue>();
 		item.put("test_hash", new AttributeValue().withS("xxxxx"));
 		item.put("test_range", new AttributeValue().withS("yyyyy"));
@@ -38,16 +38,16 @@ public class App implements CommandLineRunner {
 		vectorByteBuffer.rewind();
 		item.put("test_binary", new AttributeValue().withB(vectorByteBuffer));
 
-		// key data
+		// create key data for getItem and deleteItem
 		HashMap<String, AttributeValue> key = new HashMap<String, AttributeValue>();
 		key.put("test_hash", new AttributeValue().withS("xxxxx"));
 		key.put("test_range", new AttributeValue().withS("yyyyy"));
 
-		// query data
+		// create data for query
 		Map<String, AttributeValue> expressionAttributeValues = new HashMap<String, AttributeValue>();
 		expressionAttributeValues.put(":hash", new AttributeValue().withS("xxxxx"));
 
-		// single operation
+		// execute putItem, getItem, query, scan and deleteItem operation
 		client.putItem("test_table", item);
 		Map<String, AttributeValue> getItemResult = client.getItem("test_table", key);
 		ByteBuffer bf = getItemResult.get("test_binary").getB();
@@ -58,7 +58,7 @@ public class App implements CommandLineRunner {
 		client.scan("test_table");
 		client.deleteItem("test_table", key);
 
-		// batch operation
+		// execute batch operation
 		vector = new ArrayList<Float>();
 		int verctor_size = 1000;
 		for (int i = 0; i < verctor_size; i++) {
@@ -89,7 +89,7 @@ public class App implements CommandLineRunner {
 
 			if ((i + 1) % 25 == 0) {
 				items.put("test_table", wrl);
-				client.batchWrite(items);
+				client.batchWriteCore(items);
 				System.out.println("Batch End");
 				items = new HashMap<String, List<WriteRequest>>();
 				wrl = new ArrayList<WriteRequest>();
@@ -97,7 +97,7 @@ public class App implements CommandLineRunner {
 		}
 		if (items.size() > 0) {
 			items.put("test_table", wrl);
-			client.batchWrite(items);
+			client.batchWriteCore(items);
 			System.out.println("Batch End");
 			items = new HashMap<String, List<WriteRequest>>();
 			wrl = new ArrayList<WriteRequest>();
@@ -121,7 +121,7 @@ public class App implements CommandLineRunner {
 
 			if ((i + 1) % 25 == 0) {
 				items.put("test_table", wrl);
-				client.batchWrite(items);
+				client.batchWriteCore(items);
 				System.out.println("Batch End");
 				items = new HashMap<String, List<WriteRequest>>();
 				wrl = new ArrayList<WriteRequest>();
@@ -129,7 +129,7 @@ public class App implements CommandLineRunner {
 		}
 		if (items.size() > 0) {
 			items.put("test_table", wrl);
-			client.batchWrite(items);
+			client.batchWriteCore(items);
 			System.out.println("Batch End");
 		}
 		end = System.currentTimeMillis();
