@@ -139,34 +139,40 @@ public class DynamoDBClient {
 		}
 		int batchWriteMaxNum = 25;
 		Set<String> tables = _items.keySet();
-		int remainRequestNum = 0;
+		int remainingRequestNum = 0;
 		Map<String, List<WriteRequest>> items = new HashMap<String, List<WriteRequest>>();
+		// テーブル毎のループ
 		for(Iterator<String> tableIt = tables.iterator(); tableIt.hasNext();) {
 			String table = tableIt.next();
 			List<WriteRequest> _writeRequests = _items.get(table);
 			List<WriteRequest> writeRequests = new ArrayList<WriteRequest>();
+			// 1テーブルに対するリクエストのループ
 			for(Iterator<WriteRequest> writeRequestsIt = _writeRequests.iterator(); writeRequestsIt.hasNext();) {
 				WriteRequest writeRequest = writeRequestsIt.next();
 				writeRequests.add(writeRequest);
-				if(writeRequests.size() == batchWriteMaxNum - remainRequestNum) {
+				// リクエスト数がbatchWriteMaxNumに達した場合
+				if(writeRequests.size() == batchWriteMaxNum - remainingRequestNum) {
 					items.put(table, writeRequests);
 					batchWriteCore(items);
 					writeRequests = new ArrayList<WriteRequest>();
 					items = new HashMap<String, List<WriteRequest>>();
-					remainRequestNum = 0;
+					remainingRequestNum = 0;
+				// あるテーブルのリクエスト数がbatchWriteMaxNum未満だが、次のテーブルがある場合
 				} else if (!writeRequestsIt.hasNext() && tableIt.hasNext()) {
 					items.put(table, writeRequests);
-					remainRequestNum = writeRequests.size();
+					remainingRequestNum += writeRequests.size();
 					writeRequests = new ArrayList<WriteRequest>();
+				// 最終ループの場合
 				} else if (!writeRequestsIt.hasNext() && !tableIt.hasNext() && writeRequests.size() > 0) {
 					items.put(table, writeRequests);
+					batchWriteCore(items);
 				}
 			}
 		}
 	}
 
 	// 上記が作成できたら private 化
-	public void batchWriteCore(Map<String, List<WriteRequest>> items) {
+	private void batchWriteCore(Map<String, List<WriteRequest>> items) {
 		// 25 Request以下なのか気にしないようにしたい
 		try {
 			BatchWriteItemRequest bwir = new BatchWriteItemRequest()

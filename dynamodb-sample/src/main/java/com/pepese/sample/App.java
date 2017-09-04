@@ -87,21 +87,26 @@ public class App implements CommandLineRunner {
 			wr.setPutRequest(pr);
 			wrl.add(wr);
 
-			if ((i + 1) % 25 == 0) {
-				items.put("test_table", wrl);
-				client.batchWriteCore(items);
-				System.out.println("Batch End");
-				items = new HashMap<String, List<WriteRequest>>();
-				wrl = new ArrayList<WriteRequest>();
-			}
+//			if ((i + 1) % 25 == 0) {
+//				items.put("test_table", wrl);
+//				client.batchWriteCore(items);
+//				System.out.println("Batch End");
+//				items = new HashMap<String, List<WriteRequest>>();
+//				wrl = new ArrayList<WriteRequest>();
+//			}
 		}
-		if (items.size() > 0) {
-			items.put("test_table", wrl);
-			client.batchWriteCore(items);
-			System.out.println("Batch End");
-			items = new HashMap<String, List<WriteRequest>>();
-			wrl = new ArrayList<WriteRequest>();
-		}
+//		if (items.size() > 0) {
+//			items.put("test_table", wrl);
+//			client.batchWrite(items);
+//			System.out.println("Batch End");
+//			items = new HashMap<String, List<WriteRequest>>();
+//			wrl = new ArrayList<WriteRequest>();
+//		}
+		items.put("test_table", wrl);
+		client.batchWrite(items);
+		System.out.println("Batch End");
+		items = new HashMap<String, List<WriteRequest>>();
+		wrl = new ArrayList<WriteRequest>();
 		long end = System.currentTimeMillis();
 		long batchPutTime = end - start;
 		start = System.currentTimeMillis();
@@ -119,19 +124,22 @@ public class App implements CommandLineRunner {
 			wr.setDeleteRequest(dr);
 			wrl.add(wr);
 
-			if ((i + 1) % 25 == 0) {
-				items.put("test_table", wrl);
-				client.batchWriteCore(items);
-				System.out.println("Batch End");
-				items = new HashMap<String, List<WriteRequest>>();
-				wrl = new ArrayList<WriteRequest>();
-			}
+//			if ((i + 1) % 25 == 0) {
+//				items.put("test_table", wrl);
+//				client.batchWriteCore(items);
+//				System.out.println("Batch End");
+//				items = new HashMap<String, List<WriteRequest>>();
+//				wrl = new ArrayList<WriteRequest>();
+//			}
 		}
-		if (items.size() > 0) {
-			items.put("test_table", wrl);
-			client.batchWriteCore(items);
-			System.out.println("Batch End");
-		}
+//		if (items.size() > 0) {
+//			items.put("test_table", wrl);
+//			client.batchWriteCore(items);
+//			System.out.println("Batch End");
+//		}
+		items.put("test_table", wrl);
+		client.batchWrite(items);
+		System.out.println("Batch End");
 		end = System.currentTimeMillis();
 		long batchDeleteTime = end - start;
 		System.out.println("Batch Delete for " + batchPutTime + "ms");
