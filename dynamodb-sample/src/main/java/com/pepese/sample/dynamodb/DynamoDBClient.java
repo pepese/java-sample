@@ -35,7 +35,7 @@ import lombok.extern.slf4j.Slf4j;
 public class DynamoDBClient {
 
 	private static AmazonDynamoDB client;
-	
+
 	@Value("${aws.dynamodb.region:AP_NORTHEAST_1}")
 	private String region;
 
@@ -48,7 +48,7 @@ public class DynamoDBClient {
 	}
 
 	public void putItem(String tableName, Map<String, AttributeValue> item) {
-		if(tableName == null || item == null || item.size() == 0) {
+		if (tableName == null || item == null || item.size() == 0) {
 			return;
 		}
 		PutItemRequest request = new PutItemRequest().withTableName(tableName).withItem(item);
@@ -61,7 +61,7 @@ public class DynamoDBClient {
 	}
 
 	public Map<String, AttributeValue> getItem(String tableName, Map<String, AttributeValue> key) {
-		if(tableName == null || key == null || key.size() == 0) {
+		if (tableName == null || key == null || key.size() == 0) {
 			return null;
 		}
 		GetItemRequest request = new GetItemRequest().withTableName(tableName).withKey(key);
@@ -79,8 +79,9 @@ public class DynamoDBClient {
 		return result != null ? result.getItem() : null;
 	}
 
-	public List<Map<String, AttributeValue>> query(String tableName, String keyConditionExpression, Map<String, AttributeValue> expressionAttributeValues) {
-		if(tableName == null || keyConditionExpression == null || expressionAttributeValues == null) {
+	public List<Map<String, AttributeValue>> query(String tableName, String keyConditionExpression,
+			Map<String, AttributeValue> expressionAttributeValues) {
+		if (tableName == null || keyConditionExpression == null || expressionAttributeValues == null) {
 			return null;
 		}
 		QueryRequest request = new QueryRequest().withTableName(tableName)
@@ -101,7 +102,7 @@ public class DynamoDBClient {
 	}
 
 	public List<Map<String, AttributeValue>> scan(String tableName) {
-		if(tableName == null) {
+		if (tableName == null) {
 			return null;
 		}
 		ScanRequest request = new ScanRequest().withTableName(tableName);
@@ -120,7 +121,7 @@ public class DynamoDBClient {
 	}
 
 	public void deleteItem(String tableName, Map<String, AttributeValue> key) {
-		if(tableName == null || key == null || key.size() == 0) {
+		if (tableName == null || key == null || key.size() == 0) {
 			return;
 		}
 		DeleteItemRequest request = new DeleteItemRequest().withTableName(tableName).withKey(key);
@@ -131,7 +132,7 @@ public class DynamoDBClient {
 			throwRuntimeException("DeleteItem is failed.", e);
 		}
 	}
-	
+
 	// 作成中
 	public void batchWrite(Map<String, List<WriteRequest>> _items) {
 		if (_items == null || _items.isEmpty()) {
@@ -142,27 +143,27 @@ public class DynamoDBClient {
 		int remainingRequestNum = 0;
 		Map<String, List<WriteRequest>> items = new HashMap<String, List<WriteRequest>>();
 		// テーブル毎のループ
-		for(Iterator<String> tableIt = tables.iterator(); tableIt.hasNext();) {
+		for (Iterator<String> tableIt = tables.iterator(); tableIt.hasNext();) {
 			String table = tableIt.next();
 			List<WriteRequest> _writeRequests = _items.get(table);
 			List<WriteRequest> writeRequests = new ArrayList<WriteRequest>();
 			// 1テーブルに対するリクエストのループ
-			for(Iterator<WriteRequest> writeRequestsIt = _writeRequests.iterator(); writeRequestsIt.hasNext();) {
+			for (Iterator<WriteRequest> writeRequestsIt = _writeRequests.iterator(); writeRequestsIt.hasNext();) {
 				WriteRequest writeRequest = writeRequestsIt.next();
 				writeRequests.add(writeRequest);
 				// リクエスト数がbatchWriteMaxNumに達した場合
-				if(writeRequests.size() == batchWriteMaxNum - remainingRequestNum) {
+				if (writeRequests.size() == batchWriteMaxNum - remainingRequestNum) {
 					items.put(table, writeRequests);
 					batchWriteCore(items);
 					writeRequests = new ArrayList<WriteRequest>();
 					items = new HashMap<String, List<WriteRequest>>();
 					remainingRequestNum = 0;
-				// あるテーブルのリクエスト数がbatchWriteMaxNum未満だが、次のテーブルがある場合
+					// あるテーブルのリクエスト数がbatchWriteMaxNum未満だが、次のテーブルがある場合
 				} else if (!writeRequestsIt.hasNext() && tableIt.hasNext()) {
 					items.put(table, writeRequests);
 					remainingRequestNum += writeRequests.size();
 					writeRequests = new ArrayList<WriteRequest>();
-				// 最終ループの場合
+					// 最終ループの場合
 				} else if (!writeRequestsIt.hasNext() && !tableIt.hasNext() && writeRequests.size() > 0) {
 					items.put(table, writeRequests);
 					batchWriteCore(items);
@@ -171,9 +172,14 @@ public class DynamoDBClient {
 		}
 	}
 
-	// 上記が作成できたら private 化
 	private void batchWriteCore(Map<String, List<WriteRequest>> items) {
-		// 25 Request以下なのか気にしないようにしたい
+		if (log.isDebugEnabled()) {
+			int batchWriteSize = 0;
+			for (String table : items.keySet()) {
+				batchWriteSize += items.get(table).size();
+			}
+			log.debug("BatchWrite size is " + batchWriteSize);
+		}
 		try {
 			BatchWriteItemRequest bwir = new BatchWriteItemRequest()
 					.withReturnConsumedCapacity(ReturnConsumedCapacity.TOTAL).withRequestItems(items);

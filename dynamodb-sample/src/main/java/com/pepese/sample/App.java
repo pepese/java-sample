@@ -70,13 +70,11 @@ public class App implements CommandLineRunner {
 		}
 		vectorByteBuffer.rewind();
 
-		int item_num = 200; // QAの数
 		// vector（サイズ1000）×500個で99秒かかる。（キャパシティーユニット：5）
-		System.out.println("Batch Put Start.");
-		long start = System.currentTimeMillis();
-		Map<String, List<WriteRequest>> items = new HashMap<String, List<WriteRequest>>(); // テーブル名、WriteRequestのリスト
-		List<WriteRequest> wrl = new ArrayList<WriteRequest>(); // WriteRequestは、PutRequestかDeleteRequest
-		for (int i = 0; i < item_num; i++) {
+		List<WriteRequest> prl = new ArrayList<WriteRequest>(); // WriteRequestは、PutRequestかDeleteRequest
+		List<WriteRequest> drl = new ArrayList<WriteRequest>(); // WriteRequestは、PutRequestかDeleteRequest
+		for (int i = 0; i < 10; i++) {
+			// PutRequest
 			HashMap<String, AttributeValue> putItem = new HashMap<String, AttributeValue>();
 			putItem.put("test_hash", new AttributeValue().withS("550e8400-e29b-41d4-a716-446655440000"));
 			putItem.put("test_range", new AttributeValue().withS("class_id_" + new Integer(i).toString()));
@@ -85,65 +83,70 @@ public class App implements CommandLineRunner {
 			pr.setItem(putItem);
 			WriteRequest wr = new WriteRequest();
 			wr.setPutRequest(pr);
-			wrl.add(wr);
-
-//			if ((i + 1) % 25 == 0) {
-//				items.put("test_table", wrl);
-//				client.batchWriteCore(items);
-//				System.out.println("Batch End");
-//				items = new HashMap<String, List<WriteRequest>>();
-//				wrl = new ArrayList<WriteRequest>();
-//			}
-		}
-//		if (items.size() > 0) {
-//			items.put("test_table", wrl);
-//			client.batchWrite(items);
-//			System.out.println("Batch End");
-//			items = new HashMap<String, List<WriteRequest>>();
-//			wrl = new ArrayList<WriteRequest>();
-//		}
-		items.put("test_table", wrl);
-		client.batchWrite(items);
-		System.out.println("Batch End");
-		items = new HashMap<String, List<WriteRequest>>();
-		wrl = new ArrayList<WriteRequest>();
-		long end = System.currentTimeMillis();
-		long batchPutTime = end - start;
-		start = System.currentTimeMillis();
-
-		System.out.println("Batch Delete Start.");
-		items = new HashMap<String, List<WriteRequest>>(); // テーブル名、WriteRequestのリスト
-		wrl = new ArrayList<WriteRequest>(); // WriteRequestは、PutItemRequestかDeleteItemRequest
-		for (int i = 0; i < item_num; i++) {
+			prl.add(wr);
+			
+			// DeleteRequest
 			HashMap<String, AttributeValue> deleteKey = new HashMap<String, AttributeValue>();
 			deleteKey.put("test_hash", new AttributeValue().withS("550e8400-e29b-41d4-a716-446655440000"));
 			deleteKey.put("test_range", new AttributeValue().withS("class_id_" + new Integer(i).toString()));
 			DeleteRequest dr = new DeleteRequest(); // PutItemRequest ではないことに注意！テーブル名を設定する必要がない。
 			dr.setKey(deleteKey);
-			WriteRequest wr = new WriteRequest();
+			wr = new WriteRequest();
 			wr.setDeleteRequest(dr);
-			wrl.add(wr);
-
-//			if ((i + 1) % 25 == 0) {
-//				items.put("test_table", wrl);
-//				client.batchWriteCore(items);
-//				System.out.println("Batch End");
-//				items = new HashMap<String, List<WriteRequest>>();
-//				wrl = new ArrayList<WriteRequest>();
-//			}
+			drl.add(wr);
 		}
-//		if (items.size() > 0) {
-//			items.put("test_table", wrl);
-//			client.batchWriteCore(items);
-//			System.out.println("Batch End");
-//		}
-		items.put("test_table", wrl);
-		client.batchWrite(items);
-		System.out.println("Batch End");
+		
+		// PutRequest
+		Map<String, List<WriteRequest>> put_items = new HashMap<String, List<WriteRequest>>(); // テーブル名、WriteRequestのリスト
+		put_items.put("test_table2", prl);
+		prl = new ArrayList<WriteRequest>();
+		// DeleteRequest
+		Map<String, List<WriteRequest>> delete_items = new HashMap<String, List<WriteRequest>>(); // テーブル名、WriteRequestのリスト
+		delete_items.put("test_table2", drl);
+		drl = new ArrayList<WriteRequest>();
+		
+		for (int i = 10; i < 20; i++) {
+			// PutRequest
+			HashMap<String, AttributeValue> putItem = new HashMap<String, AttributeValue>();
+			putItem.put("test_hash", new AttributeValue().withS("550e8400-e29b-41d4-a716-446655440000"));
+			putItem.put("test_range", new AttributeValue().withS("class_id_" + new Integer(i).toString()));
+			putItem.put("vector", new AttributeValue().withB(vectorByteBuffer));
+			PutRequest pr = new PutRequest(); // PutItemRequest ではないことに注意！テーブル名を設定する必要がない。
+			pr.setItem(putItem);
+			WriteRequest wr = new WriteRequest();
+			wr.setPutRequest(pr);
+			prl.add(wr);
+			
+			// DeleteRequest
+			HashMap<String, AttributeValue> deleteKey = new HashMap<String, AttributeValue>();
+			deleteKey.put("test_hash", new AttributeValue().withS("550e8400-e29b-41d4-a716-446655440000"));
+			deleteKey.put("test_range", new AttributeValue().withS("class_id_" + new Integer(i).toString()));
+			DeleteRequest dr = new DeleteRequest(); // PutItemRequest ではないことに注意！テーブル名を設定する必要がない。
+			dr.setKey(deleteKey);
+			wr = new WriteRequest();
+			wr.setDeleteRequest(dr);
+			drl.add(wr);
+		}
+		
+		// PutRequest
+		System.out.println("Batch Put Start.");
+		//Map<String, List<WriteRequest>> put_items = new HashMap<String, List<WriteRequest>>(); // テーブル名、WriteRequestのリスト
+		put_items.put("test_table", prl);
+		long start = System.currentTimeMillis();
+		client.batchWrite(put_items);
+		System.out.println("Batch Put End");
+		long end = System.currentTimeMillis();
+		System.out.println("Batch Delete for " + (end - start) + "ms");
+
+		// DeleteRequest
+		System.out.println("Batch Delete Start.");
+		//Map<String, List<WriteRequest>> delete_items = new HashMap<String, List<WriteRequest>>(); // テーブル名、WriteRequestのリスト
+		delete_items.put("test_table", drl);
+		start = System.currentTimeMillis();
+		client.batchWrite(delete_items);
+		System.out.println("Batch Delete End");
 		end = System.currentTimeMillis();
-		long batchDeleteTime = end - start;
-		System.out.println("Batch Delete for " + batchPutTime + "ms");
-		System.out.println("Batch Delete for " + batchDeleteTime + "ms");
+		System.out.println("Batch Delete for " + (end - start) + "ms");
 	}
 
 	public static void main(String[] args) {
